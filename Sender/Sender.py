@@ -88,16 +88,19 @@ def sender(filename: str, receiver_IP_address: str, receiver_port: int):
     average_transfer_rate_packets_sec = round(PACKETS_COUNT / elasped_time, 2)
     average_transfer_rate_bytes_sec = round(no_bytes / elasped_time, 2)
     
-    def convertMillis(millis):
-        seconds = int(millis / 1000) % 60
-        minutes = int(millis / (1000 * 60)) % 60
-        hours = int(millis / (1000 * 60 * 60)) % 24
-        return str(hours) + ':' + str(minutes) + ':' + str(seconds)
+    def convert(seconds):
+        seconds = seconds % (24 * 3600)
+        hour = seconds // 3600
+        seconds %= 3600
+        minutes = seconds // 60
+        seconds %= 60
+        
+        return "%d:%02d:%02d" % (hour, minutes, seconds)
     
     print("\n")
-    print(f'Start time of file transfering: {convertMillis(transfer_start_time)}')
-    print(f'End time of file transfering: {convertMillis(end_time)}')
-    print(f'Elasped time of file transfering: {round(elasped_time, 2)} ms')
+    print(f'Start time of file transfering: {convert(transfer_start_time)}')
+    print(f'End time of file transfering: {convert(end_time)}')
+    print(f'Elasped time of file transfering: {round(elasped_time, 2)} s')
     print(f'No of packets: {PACKETS_COUNT}')
     print(f'No of bytes: {round(no_bytes / 1000000, 3)} MB')
     print(f'Average transfer rate in packets/sec: {average_transfer_rate_packets_sec}')
@@ -105,5 +108,5 @@ def sender(filename: str, receiver_IP_address: str, receiver_port: int):
     print(f"No of retransmissions: {retransmissions} packets")
 
 if __name__ == '__main__':
-    kwargs = {'filename': "MediumFile.jpg", 'receiver_IP_address': data["SERVER"], 'receiver_port': 12000}
+    kwargs = {'filename': "SmallFile.png", 'receiver_IP_address': data["SERVER"], 'receiver_port': data["receiver_port"]}
     sender(**kwargs)

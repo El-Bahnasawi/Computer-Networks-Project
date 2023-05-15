@@ -6,11 +6,8 @@ import json
 f = open('../Params.json')
 data = json.load(f)
 
-
 serverSocket = socket(AF_INET, SOCK_DGRAM)
-serverPort = 12000
-SERVER = data["SERVER"]
-serverSocket.bind((SERVER, serverPort))
+serverSocket.bind((data["SERVER"], data["receiver_port"]))
 print("The server is ready to receive")
 
 excepted_pkt_id = 0
@@ -57,16 +54,19 @@ no_bytes = len(b''.join([packet[4:-2] for packet in good_packets]))
 average_transfer_rate_packets_sec = round(len(good_packets) / elasped_time, 2)
 average_transfer_rate_bytes_sec = round(no_bytes / elasped_time, 2)
 
-def convertMillis(millis):
-    seconds = int(millis / 1000) % 60
-    minutes = int(millis / (1000 * 60)) % 60
-    hours = int(millis / (1000 * 60 * 60)) % 24
-    return str(hours) + ':' + str(minutes) + ':' + str(seconds)
+def convert(seconds):
+    seconds = seconds % (24 * 3600)
+    hour = seconds // 3600
+    seconds %= 3600
+    minutes = seconds // 60
+    seconds %= 60
+    
+    return "%d:%02d:%02d" % (hour, minutes, seconds)
 
 print("\n")
-print(f'Start time of file transfering: {convertMillis(transfer_start_time)}')
-print(f'End time of file transfering: {convertMillis(end_time)}')
-print(f'Elasped time of file transfering: {round(elasped_time, 2)} ms')
+print(f'Start time of file transfering: {convert(transfer_start_time)}')
+print(f'End time of file transfering: {convert(end_time)}')
+print(f'Elasped time of file transfering: {round(elasped_time, 2)} s')
 print(f'No of packets: {len(good_packets)}')
 print(f'No of bytes: {round(no_bytes / 1000000, 3)} MB')
 print(f'Average transfer rate in packets/sec: {average_transfer_rate_packets_sec}')
@@ -75,7 +75,7 @@ print(f"No of retransmissions: {retransmitted_packets} packets")
 
 
 binary_data = b''.join([packet[4:-2] for packet in good_packets])
-f = open("received_img.jpg", "wb")
+f = open("received_img.png", "wb")
 f.write(binary_data)
 f.close()
 
@@ -87,7 +87,7 @@ plt.scatter(x = [x - temp for x in x2], y = y2, c ="yellow", edgecolor ="red", *
 
 plt.legend(["sent" , "retransmitted"], loc = "lower right")
 plt.title(f"Window Size: {data['WINDOW_SIZE']} packtets, Timeout Interval: {data['TIMEOUT']} ms \nRetransmitted packets: {retransmitted_packets}, loss rate: {round((retransmitted_packets/len(good_packets)) * 100, 2)}%")
-plt.xlabel("Time (ms)")
+plt.xlabel("Time (s)")
 plt.ylabel("Packet_ID")
 plt.show()
 

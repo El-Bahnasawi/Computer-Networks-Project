@@ -1,1 +1,1 @@
-{"WINDOW_SIZE": 10, "TIMEOUT": 1, "DROP_PROB": 0, "MSS": 1024, "SERVER": ""}
+{"WINDOW_SIZE": 10, "TIMEOUT": 1, "DROP_PROB": 0, "MSS": 1024, "SERVER": "localhost", "receiver_port": 5555}
