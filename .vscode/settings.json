@@ -1,8 +1,10 @@
 {
     "cSpell.words": [
+        "cwnd",
         "DGRAM",
         "matplotlib",
         "pyplot",
+        "ssthresh",
         "xlabel",
         "ylabel"
     ]
