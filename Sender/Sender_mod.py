@@ -153,6 +153,9 @@ def sender(filename: str, receiver_IP_address: str, receiver_port: int):
         new_filename = input("Enter the new file name: ")
         sender(new_filename, receiver_IP_address, receiver_port)
 if __name__ == '__main__':
-    kwargs = {'filename': "SmallFile.png", 'receiver_IP_address': data["SERVER"], 'receiver_port': data["receiver_port"]}
-    sender(**kwargs)
-    
+    while True:
+        kwargs = {'filename': input("Enter the file name: "), 'receiver_IP_address': data["SERVER"], 'receiver_port': data["receiver_port"]}
+        sender(**kwargs)
+        send_another_file = input("Do you want to send another file? (yes/no)(y/n): ")
+        if send_another_file.lower() not in ["yes", "y"]:
+            break
