@@ -1,8 +1,10 @@
+#receiver code#
 import json
 import socket
 import time
 import matplotlib.pyplot as plt
 from socket import timeout
+import random
 
 def load_parameters(json_file='../Params.json'):
     """
@@ -79,7 +81,8 @@ def receiver(server_ip, server_port, plot_loss=True, params=None):
                     break
             else:
                 # Send ACK for the last correctly received packet
-                ACK = (expected_packet_id - 1).to_bytes(2, 'big') + b'\x01'  # Add a byte to indicate that this is a duplicate ACK
+                is_dup_ack = 1 if packet_id < expected_packet_id else 0
+                ACK = (expected_packet_id - 1).to_bytes(2, 'big') + is_dup_ack.to_bytes(1, 'big')  # Add a byte to indicate if this is a duplicate ACK
                 server_socket.sendto(ACK, (server_ip, server_port))
 
         except timeout:

@@ -1,3 +1,4 @@
+#sender code#
 from socket import *
 import math
 import random
@@ -115,7 +116,13 @@ def sender(filename: str, receiver_IP_address: str, receiver_port: int):
     ssthresh = float('inf')
     cwnd = 1
     dup_ack_count = 0
-
+    # Initialize variables for SRTT calculation
+    estimated_rtt = 0.0
+    dev_rtt = 0.0
+    alpha = 0.125
+    beta = 0.25
+    timeout_interval = TIMEOUT
+    # ... (previous code omitted for brevity)
     while base < PACKETS_COUNT:
         try:
             while next_seq_num < min(base + int(cwnd), PACKETS_COUNT):
@@ -128,9 +135,14 @@ def sender(filename: str, receiver_IP_address: str, receiver_port: int):
                 else :
                     print(f'Packet {next_seq_num} Dropped')
                     next_seq_num += 1
-
+            send_time = time.time()
             ACK, _ = clientSocket.recvfrom(2048)
-
+            # Calculate RTT and update timeout_interval
+            sample_rtt = time.time() - send_time
+            estimated_rtt = (1 - alpha) * estimated_rtt + alpha * sample_rtt
+            dev_rtt = (1 - beta) * dev_rtt + beta * abs(sample_rtt - estimated_rtt)
+            timeout_interval = estimated_rtt + 4 * dev_rtt
+            clientSocket.settimeout(timeout_interval)
             ACK_ID = int.from_bytes(ACK[:2], 'big')
             is_dup_ack = ACK[2]
 
@@ -159,7 +171,11 @@ def sender(filename: str, receiver_IP_address: str, receiver_port: int):
             next_seq_num = excepted_ack_id
             ssthresh = cwnd / 2
             cwnd = 1
-
+            # Update timeout interval in case of timeout
+            timeout_interval *= 2
+            clientSocket.settimeout(timeout_interval)
+            
+            
     end_time = round(time.time(), 3)
     elapsed_time = end_time - transfer_start_time
     no_bytes = len(b''.join([packet[4:-2] for packet in packets]))
