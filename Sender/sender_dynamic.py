@@ -52,8 +52,7 @@ with open('../Params.json') as params:
     TIMEOUT = data['TIMEOUT']
     DROP_PROB = data['DROP_PROB']
 if DROP_PROB == 0:
-    loss_percentage = float(input("Enter the desired simulation packet loss percentage \n (You can set Default value in Params.json) (between 0% to 20%): "))
-    DROP_PROB = 100 - loss_percentage  # Update DROP_PROB accordingly
+    DROP_PROB = float(input("Enter the desired simulation packet loss percentage \n (You can set Default value in Params.json) (between 0% to 20%): "))
 
 def sender(filename: str, receiver_IP_address: str, receiver_port: int):
     """
