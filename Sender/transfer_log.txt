@@ -152,3 +152,21 @@
     Average transfer rate in packets/sec: 1160.38
     Average transfer rate in bytes/sec: 1184261.72
     
+    Start time of file transferring: 21:19:06
+    End time of file transferring: 21:19:07
+    Elapsed time of file transferring: 0.44 s
+    No of packets: 492
+    No of bytes: 0.502 MB
+    No of retransmissions: 27
+    Average transfer rate in packets/sec: 1118.18
+    Average transfer rate in bytes/sec: 1141197.58
+    
+    Start time of file transferring: 21:30:36
+    End time of file transferring: 21:30:37
+    Elapsed time of file transferring: 0.5 s
+    No of packets: 492
+    No of bytes: 0.502 MB
+    No of retransmissions: 61
+    Average transfer rate in packets/sec: 985.97
+    Average transfer rate in bytes/sec: 1006270.39
+    

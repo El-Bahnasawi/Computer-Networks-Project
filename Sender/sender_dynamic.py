@@ -54,7 +54,7 @@ with open('../Params.json') as params:
 if DROP_PROB == 0:
     loss_percentage = float(input("Enter the desired simulation packet loss percentage \n (You can set Default value in Params.json) (between 0% to 20%): "))
     DROP_PROB =  loss_percentage   # Update DROP_PROB accordingly 
-def sender(filename: str, receiver_IP_address: str, receiver_port: int, TIMEOUT: float):
+def sender(filename: str, receiver_IP_address: str, receiver_port: int, TIMEOUT: float, drop_prob: float):
     """
     This function sends a file to a receiver using a specified IP address and port.
     
@@ -86,13 +86,14 @@ def sender(filename: str, receiver_IP_address: str, receiver_port: int, TIMEOUT:
         packet_id = 0
         trailer_id = 0x0000
         while len(data) > 0:
-            application_data = data[:MSS]
-            data = data[MSS:]
-            segment = packet_id.to_bytes(2, 'big') + file_id.to_bytes(2, 'big') + application_data
-            segments.append(segment)
-            packet_id += 1
+                application_data = data[:MSS]
+                data = data[MSS:]
+                if len(data) == 0:  # Check if this is the last packet
+                    application_data += 0xFFFF.to_bytes(2, "big")  # Append the trailer identifier to the last packet
+                segment = packet_id.to_bytes(2, 'big') + file_id.to_bytes(2, 'big') + application_data
+                segments.append(segment)
+                packet_id += 1
         return segments
-        
     packets = prepare_packets(filename)
 
 
@@ -166,5 +167,5 @@ def sender(filename: str, receiver_IP_address: str, receiver_port: int, TIMEOUT:
         sender(new_filename, receiver_IP_address, receiver_port)
 if __name__ == '__main__':
     while True:
-        kwargs = {'filename': "SmallFile.png", 'receiver_IP_address': data["SERVER"], 'receiver_port': data["receiver_port"], 'TIMEOUT': TIMEOUT}
+        kwargs = {'filename': "SmallFile.png", 'receiver_IP_address': data["SERVER"], 'receiver_port': data["receiver_port"], 'TIMEOUT': TIMEOUT, 'drop_prob': DROP_PROB}
         sender(**kwargs)
