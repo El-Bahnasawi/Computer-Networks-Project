@@ -102,7 +102,7 @@ def receiver(server_ip, server_port, plot_loss=True, params=None):
     total_packets = len(good_packets) + len(retransmitted_packets)
     actual_loss_rate = round((len(retransmitted_packets) / total_packets) * 100, 2)
     print(f"Actual loss rate: {actual_loss_rate}%")
-
+    loss_rate = round((retransmitted_packets / total_packets) * 100, 2)
     # Plot packet ID vs time
     if plot_loss:
         sent_packet_ids, sent_timestamps = zip(*sent_packets)
@@ -112,7 +112,8 @@ def receiver(server_ip, server_port, plot_loss=True, params=None):
         plt.legend(["sent", "retransmitted"], loc="lower right")
         plt.xlabel("Time")
         plt.ylabel("Packet ID")
-        plt.title(f"Window Size: {params['WINDOW_SIZE']} packets, Timeout Interval: {params['TIMEOUT']} ms \nRetransmitted packets: {len(retransmitted_packets)}, actual loss rate: {actual_loss_rate}%")
+        plt.title(f"Window Size: {params['WINDOW_SIZE']} packtets \
+            , Timeout Interval: {params['TIMEOUT']} ms \nRetransmitted packets: {retransmitted_packets}, loss rate: {loss_rate}% , actual loss rate: {actual_loss_rate}%")
         plt.show()
 
 if __name__ == '__main__':

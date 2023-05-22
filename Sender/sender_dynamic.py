@@ -1,4 +1,4 @@
-#sender code#
+#new sender_mod#
 from socket import *
 import math
 import random
@@ -46,17 +46,15 @@ def print_transfer_info(start_time, end_time, elapsed_time, packets_count, bytes
         log_file.write(transfer_info)
 
 # Load parameters from the JSON file
-with open('Params.json') as params:
+with open('../Params.json') as params:
     data = json.load(params)
     WINDOW_SIZE = data['WINDOW_SIZE']
     TIMEOUT = data['TIMEOUT']
     DROP_PROB = data['DROP_PROB']
 if DROP_PROB == 0:
     loss_percentage = float(input("Enter the desired simulation packet loss percentage \n (You can set Default value in Params.json) (between 0% to 20%): "))
-    DROP_PROB = loss_percentage  # Update DROP_PROB accordingly
-
-
-def sender(filename: str, receiver_IP_address: str, receiver_port: int):
+    DROP_PROB =  loss_percentage   # Update DROP_PROB accordingly 
+def sender(filename: str, receiver_IP_address: str, receiver_port: int, TIMEOUT: float):
     """
     This function sends a file to a receiver using a specified IP address and port.
     
@@ -90,14 +88,11 @@ def sender(filename: str, receiver_IP_address: str, receiver_port: int):
         while len(data) > 0:
             application_data = data[:MSS]
             data = data[MSS:]
-            if len(data) == 0:
-                trailer_id = 0xFFFF
-            segment = packet_id.to_bytes(2, 'big') + file_id.to_bytes(2, 'big') + application_data + trailer_id.to_bytes(2, 'big')
+            segment = packet_id.to_bytes(2, 'big') + file_id.to_bytes(2, 'big') + application_data
             segments.append(segment)
             packet_id += 1
+        return segments
         
-        return segments  
-    
     packets = prepare_packets(filename)
 
 
@@ -110,73 +105,52 @@ def sender(filename: str, receiver_IP_address: str, receiver_port: int):
     next_seq_num = 0
     excepted_ack_id = 0
     retransmissions = 0 
-
+    rtt_start_time = {}
+    estimated_rtt = None
+    dev_rtt = None
+    rtt_alpha = 0.125
+    congestion_window_size = 1
     transfer_start_time = round(time.time(), 3)
 
-    # Add new variables for congestion control
-    ssthresh = float('inf')
-    cwnd = 1
-    dup_ack_count = 0
-    # Initialize variables for SRTT calculation
-    estimated_rtt = 0.0
-    dev_rtt = 0.0
-    alpha = 0.125
-    beta = 0.25
-    timeout_interval = TIMEOUT
-    # ... (previous code omitted for brevity)
     while base < PACKETS_COUNT:
         try:
-            while next_seq_num < min(base + int(cwnd), PACKETS_COUNT):
-                rnd = random.randint(0, 100)
-
-                if (rnd > DROP_PROB):
-                    print('send', next_seq_num)
-                    clientSocket.sendto(packets[next_seq_num], (receiver_IP_address, receiver_port))
-                    next_seq_num += 1
-                else :
-                    print(f'Packet {next_seq_num} Dropped')
-                    next_seq_num += 1
-            send_time = time.time()
+            while next_seq_num < min(base + congestion_window_size, PACKETS_COUNT):
+                print('send', next_seq_num)
+                clientSocket.sendto(packets[next_seq_num], (receiver_IP_address, receiver_port))
+                rtt_start_time[next_seq_num] = time.time()
+                next_seq_num += 1
             ACK, _ = clientSocket.recvfrom(2048)
-            # Calculate RTT and update timeout_interval
-            sample_rtt = time.time() - send_time
-            estimated_rtt = (1 - alpha) * estimated_rtt + alpha * sample_rtt
-            dev_rtt = (1 - beta) * dev_rtt + beta * abs(sample_rtt - estimated_rtt)
-            timeout_interval = estimated_rtt + 4 * dev_rtt
-            clientSocket.settimeout(timeout_interval)
-            ACK_ID = int.from_bytes(ACK[:2], 'big')
-            is_dup_ack = ACK[2]
 
-            # Update congestion control
+            ACK_ID = int.from_bytes(ACK[:2], 'big')
+
             if ACK_ID == excepted_ack_id:
-                if cwnd < ssthresh:
-                    cwnd *= 2  # slow start
+                sample_rtt = time.time() - rtt_start_time[ACK_ID]
+                if estimated_rtt is None:
+                    estimated_rtt = sample_rtt
+                    dev_rtt = sample_rtt / 2
                 else:
-                    cwnd += 1  # congestion avoidance
+                    estimated_rtt = (1 - rtt_alpha) * estimated_rtt + rtt_alpha * sample_rtt
+                    dev_rtt = (1 - rtt_alpha) * dev_rtt + rtt_alpha * abs(sample_rtt - estimated_rtt)
+
+                TIMEOUT = estimated_rtt + 4 * dev_rtt
+                clientSocket.settimeout(TIMEOUT)
 
                 excepted_ack_id += 1
                 base += 1
+
+                # Update the congestion window size using AIMD
+                congestion_window_size = min(congestion_window_size + 1, WINDOW_SIZE)
+
                 print('ACK_ID', ACK_ID)
             elif ACK_ID < excepted_ack_id:
-                if is_dup_ack:
-                    dup_ack_count += 1
-                    if dup_ack_count == 3:
-                        ssthresh = cwnd / 2  # fast retransmit
-                        cwnd = ssthresh + 3  # fast recovery
-                else:
-                    dup_ack_count = 0
-                    retransmissions += 1
+                retransmissions += 1
+
+                # Update the congestion window size using AIMD
+                congestion_window_size = max(congestion_window_size / 2, 1)
 
         except timeout:
             print("Request time out")
             next_seq_num = excepted_ack_id
-            ssthresh = cwnd / 2
-            cwnd = 1
-            # Update timeout interval in case of timeout
-            timeout_interval *= 2
-            clientSocket.settimeout(timeout_interval)
-            
-            
     end_time = round(time.time(), 3)
     elapsed_time = end_time - transfer_start_time
     no_bytes = len(b''.join([packet[4:-2] for packet in packets]))
@@ -192,8 +166,5 @@ def sender(filename: str, receiver_IP_address: str, receiver_port: int):
         sender(new_filename, receiver_IP_address, receiver_port)
 if __name__ == '__main__':
     while True:
-        kwargs = {'filename': input("Enter the file name: "), 'receiver_IP_address': data["SERVER"], 'receiver_port': data["receiver_port"]}
+        kwargs = {'filename': "SmallFile.png", 'receiver_IP_address': data["SERVER"], 'receiver_port': data["receiver_port"], 'TIMEOUT': TIMEOUT}
         sender(**kwargs)
-        send_another_file = input("Do you want to send another file? (yes/no)(y/n): ")
-        if send_another_file.lower() not in ["yes", "y"]:
-            break

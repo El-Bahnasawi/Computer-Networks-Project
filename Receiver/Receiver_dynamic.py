@@ -1,10 +1,10 @@
-#receiver code#
+#new receiver_mod#  
 import json
 import socket
 import time
 import matplotlib.pyplot as plt
-from socket import timeout
 import random
+from socket import timeout
 
 def load_parameters(json_file='../Params.json'):
     """
@@ -54,59 +54,66 @@ def receiver(server_ip, server_port, plot_loss=True, params=None):
     print("The server is ready to receive")
 
     expected_packet_id = 0
-    received_packets = []
-    packets_timestamps = []
-
+    good_packets = []
+    sent_packets = []
+    retransmitted_packets = []
+    dropped_packets = 0
     transfer_start_time = time.time()
 
     while True:
-        try:
-            packet, _ = server_socket.recvfrom(2048)
-            packet_id = int.from_bytes(packet[:2], 'big')
-            file_id = int.from_bytes(packet[2:4], 'big')
-            received_data = packet[4:-2]
-            trailer_id = int.from_bytes(packet[-2:], 'big')
+        message, clientAddress = server_socket.recvfrom(2048)
 
-            if packet_id == expected_packet_id:
-                received_packets.append(received_data)
-                packets_timestamps.append((packet_id, time.time()))
+        packet_id = int.from_bytes(message[:2], "big")
+        file_id = int.from_bytes(message[2:4], "big")
+        application_data = message[4:]
+        print((packet_id, file_id, 'data'))
+        if packet_id == expected_packet_id:
+            rnd = random.randint(0, 100)
+            if rnd > params['DROP_PROB']:
+                ACK = message[:2] + message[2:4]
+                server_socket.sendto(ACK, clientAddress)
+                good_packets.append(message)
                 expected_packet_id += 1
 
-                # Send ACK for the received packet
-                ACK = packet_id.to_bytes(2, 'big') + b'\x00'  # Add a byte to indicate that this is not a duplicate ACK
-                server_socket.sendto(ACK, (server_ip, server_port))
-
-                # If this is the last packet, break the loop
-                if trailer_id == 0xFFFF:
-                    break
+                sent_packets.append((packet_id, time.time()))
             else:
-                # Send ACK for the last correctly received packet
-                is_dup_ack = 1 if packet_id < expected_packet_id else 0
-                ACK = (expected_packet_id - 1).to_bytes(2, 'big') + is_dup_ack.to_bytes(1, 'big')  # Add a byte to indicate if this is a duplicate ACK
-                server_socket.sendto(ACK, (server_ip, server_port))
+                print(f'Packet {packet_id} Dropped')
+                dropped_packets += 1
+        elif packet_id > expected_packet_id:
+            if expected_packet_id > 0:
+                ACK = (expected_packet_id - 1).to_bytes(2, "big") + message[2:4]
+                server_socket.sendto(ACK, clientAddress)
 
-        except timeout:
-            print("Request time out")
+            retransmitted_packets.append((packet_id, time.time()))
+
+        if good_packets and int.from_bytes(good_packets[-1][-2:], "big") == 0xFFFF:
+            break
+
+    transfer_end_time = time.time()
+    elapsed_time = transfer_end_time - transfer_start_time
+    packets_count = len(good_packets)
+    bytes_count = sum([len(packet[4:-2]) for packet in good_packets])
+    print_transfer_info(transfer_start_time, transfer_end_time, elapsed_time, packets_count, bytes_count)
 
     # Save received data to a file
     with open("received_file.png", "wb") as f:
-        f.write(b''.join(received_packets))
+        f.write(b''.join([packet[4:-2] for packet in good_packets]))
 
-    # Display file transfer information
-    transfer_end_time = time.time()
-    elapsed_time = transfer_end_time - transfer_start_time
-    packets_count = len(received_packets)
-    bytes_count = sum([len(packet) for packet in received_packets])
-    print_transfer_info(transfer_start_time, transfer_end_time, elapsed_time, packets_count, bytes_count)
+    # Calculate the actual loss rate and retransmitted packets
+    total_packets = len(good_packets) + len(retransmitted_packets)
+    actual_loss_rate = round((len(retransmitted_packets) / total_packets) * 100, 2)
+    print(f"Actual loss rate: {actual_loss_rate}%")
 
     # Plot packet ID vs time
     if plot_loss:
-        packet_ids, timestamps = zip(*packets_timestamps)
-        plt.plot(timestamps, packet_ids, 'ro', label='Received Packets')
-        plt.xlabel('Time')
-        plt.ylabel('Packet ID')
-        plt.title('Packet ID vs Time')
-        plt.legend()
+        sent_packet_ids, sent_timestamps = zip(*sent_packets)
+        retransmitted_packet_ids, retransmitted_timestamps = zip(*retransmitted_packets)
+        plt.scatter(sent_timestamps, sent_packet_ids, c="pink", marker="s", edgecolor="green", linewidths=1, s=10)
+        plt.scatter(retransmitted_timestamps, retransmitted_packet_ids, c="yellow", edgecolor="red", linewidths=1, s=10)
+        plt.legend(["sent", "retransmitted"], loc="lower right")
+        plt.xlabel("Time")
+        plt.ylabel("Packet ID")
+        plt.title(f"Window Size: {params['WINDOW_SIZE']} packets, Timeout Interval: {params['TIMEOUT']} ms \nRetransmitted packets: {len(retransmitted_packets)}, actual loss rate: {actual_loss_rate}%")
         plt.show()
 
 if __name__ == '__main__':
