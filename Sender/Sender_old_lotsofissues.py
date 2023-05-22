@@ -58,9 +58,16 @@ def sender(filename: str, receiver_IP_address: str, receiver_port: int):
     while base < PACKETS_COUNT:
         try:
             while next_seq_num < min(base + WINDOW_SIZE, PACKETS_COUNT):
-                print('send', next_seq_num)
-                clientSocket.sendto(packets[next_seq_num], (receiver_IP_address, receiver_port))
-                next_seq_num += 1
+                rnd = random.randint(0, 100)
+    
+                if (rnd > DROP_PROB):
+                    print('send', next_seq_num)
+                    clientSocket.sendto(packets[next_seq_num], (receiver_IP_address, receiver_port))
+                    next_seq_num += 1
+                else :
+                    print(f'Packet {next_seq_num} Dropped')
+                    next_seq_num += 1
+
             ACK, _ = clientSocket.recvfrom(2048)
 
             ACK_ID = int.from_bytes(ACK[:2], 'big')
@@ -81,9 +88,7 @@ def sender(filename: str, receiver_IP_address: str, receiver_port: int):
     no_bytes = len(b''.join([packet[4:-2] for packet in packets]))
     average_transfer_rate_packets_sec = round(PACKETS_COUNT / elasped_time, 2)
     average_transfer_rate_bytes_sec = round(no_bytes / elasped_time, 2)
-    actual_loss_rate = round((retransmissions / (PACKETS_COUNT + retransmissions)) * 100, 2)
-
-
+    
     def convert(seconds):
         seconds = seconds % (24 * 3600)
         hour = seconds // 3600
@@ -102,7 +107,6 @@ def sender(filename: str, receiver_IP_address: str, receiver_port: int):
     print(f'Average transfer rate in packets/sec: {average_transfer_rate_packets_sec}')
     print(f'Average transfer rate in bytes/sec: {average_transfer_rate_bytes_sec}')
     print(f"No of retransmissions: {retransmissions} packets")
-    print(f"Actual loss rate: {actual_loss_rate}%")
 
 if __name__ == '__main__':
     kwargs = {'filename': "SmallFile.png", 'receiver_IP_address': data["SERVER"], 'receiver_port': data["receiver_port"]}

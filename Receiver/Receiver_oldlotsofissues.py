@@ -3,10 +3,10 @@ from socket import *
 import matplotlib.pyplot as plt
 import time
 import json
-import random
+
 f = open('../Params.json')
 data = json.load(f)
-DROP_PROB = data['DROP_PROB']
+
 serverSocket = socket(AF_INET, SOCK_DGRAM)
 serverSocket.bind((data["SERVER"], data["receiver_port"]))
 print("The server is ready to receive")
@@ -19,7 +19,7 @@ x1, y1 = [], []
 
 # retransmitted packets
 x2, y2 = [], []
-dropped_packets = 0
+
 retransmitted_packets = 0
 transfer_start_time = round(time.time(), 3)
 while True:
@@ -29,20 +29,15 @@ while True:
     file_id = int.from_bytes(message[2:4], "big")
     trailer_id = int.from_bytes(message[-2:], "big")
     print((packet_id, file_id, 'data', trailer_id))
-    
-    if packet_id == excepted_pkt_id:
-        rnd = random.randint(0, 100)
-        if rnd > DROP_PROB:
-            ACK = message[:2] + message[2:4]
-            serverSocket.sendto(ACK, clientAddress)
-            good_packets.append(message)
-            excepted_pkt_id += 1
 
-            y1.append(packet_id)
-            x1.append(time.time())
-        else:
-            print(f'Packet {packet_id} Dropped')
-            dropped_packets += 1
+    if packet_id == excepted_pkt_id:
+        ACK = message[:2] + message[2:4]
+        serverSocket.sendto(ACK, clientAddress)
+        good_packets.append(message)
+        excepted_pkt_id += 1
+
+        y1.append(packet_id)
+        x1.append(time.time())
     elif packet_id > excepted_pkt_id:
         if excepted_pkt_id > 0:
             ACK = (excepted_pkt_id - 1).to_bytes(2, "big") + message[2:4]
@@ -84,8 +79,7 @@ binary_data = b''.join([packet[4:-2] for packet in good_packets])
 f = open("received_img.png", "wb")
 f.write(binary_data)
 f.close()
-total_packets = len(good_packets) + retransmitted_packets
-loss_rate = round((retransmitted_packets / total_packets) * 100, 2)
+
 temp = min(x1[0], x2[0])
 kwargs = {'linewidths': 1, 's': 10}
 plt.scatter(x = [x - temp for x in x1], y = y1, c ="pink", marker ="s", edgecolor ="green", **kwargs)
@@ -93,12 +87,7 @@ plt.scatter(x = [x - temp for x in x2], y = y2, c ="yellow", edgecolor ="red", *
 
 
 plt.legend(["sent" , "retransmitted"], loc = "lower right")
-
-# After the loop, calculate the actual loss rate
-actual_loss_rate = round((dropped_packets / (len(good_packets) + retransmitted_packets)) * 100, 2)
-print(f"Actual loss rate: {actual_loss_rate}%")
-plt.title(f"Window Size: {data['WINDOW_SIZE']} packtets \
-    , Timeout Interval: {data['TIMEOUT']} ms \nRetransmitted packets: {retransmitted_packets}, loss rate: {loss_rate}% , actual loss rate: {actual_loss_rate}%")
+plt.title(f"Window Size: {data['WINDOW_SIZE']} packtets, Timeout Interval: {data['TIMEOUT']} ms \nRetransmitted packets: {retransmitted_packets}, loss rate: {round((retransmitted_packets/len(good_packets)) * 100, 2)}%")
 plt.xlabel("Time (s)")
 plt.ylabel("Packet_ID")
 plt.show()

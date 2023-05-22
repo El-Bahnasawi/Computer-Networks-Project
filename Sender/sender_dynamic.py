@@ -46,14 +46,14 @@ def print_transfer_info(start_time, end_time, elapsed_time, packets_count, bytes
         log_file.write(transfer_info)
 
 # Load parameters from the JSON file
-with open('../Params.json') as params:
+with open('Params.json') as params:
     data = json.load(params)
     WINDOW_SIZE = data['WINDOW_SIZE']
     TIMEOUT = data['TIMEOUT']
     DROP_PROB = data['DROP_PROB']
 if DROP_PROB == 0:
     loss_percentage = float(input("Enter the desired simulation packet loss percentage \n (You can set Default value in Params.json) (between 0% to 20%): "))
-    DROP_PROB = 100 - loss_percentage  # Update DROP_PROB accordingly
+    DROP_PROB = loss_percentage  # Update DROP_PROB accordingly
 
 def sender(filename: str, receiver_IP_address: str, receiver_port: int):
     """

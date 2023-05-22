@@ -1,3 +1,4 @@
+#new sender_mod#
 from socket import *
 import math
 import random
@@ -52,8 +53,7 @@ with open('../Params.json') as params:
     DROP_PROB = data['DROP_PROB']
 if DROP_PROB == 0:
     loss_percentage = float(input("Enter the desired simulation packet loss percentage \n (You can set Default value in Params.json) (between 0% to 20%): "))
-    DROP_PROB = 100 - loss_percentage  # Update DROP_PROB accordingly
-
+    DROP_PROB =  loss_percentage   # Update DROP_PROB accordingly 
 def sender(filename: str, receiver_IP_address: str, receiver_port: int):
     """
     This function sends a file to a receiver using a specified IP address and port.
@@ -114,16 +114,9 @@ def sender(filename: str, receiver_IP_address: str, receiver_port: int):
     while base < PACKETS_COUNT:
         try:
             while next_seq_num < min(base + WINDOW_SIZE, PACKETS_COUNT):
-                rnd = random.randint(0, 100)
-    
-                if (rnd > DROP_PROB):
-                    print('send', next_seq_num)
-                    clientSocket.sendto(packets[next_seq_num], (receiver_IP_address, receiver_port))
-                    next_seq_num += 1
-                else :
-                    print(f'Packet {next_seq_num} Dropped')
-                    next_seq_num += 1
-
+                print('send', next_seq_num)
+                clientSocket.sendto(packets[next_seq_num], (receiver_IP_address, receiver_port))
+                next_seq_num += 1
             ACK, _ = clientSocket.recvfrom(2048)
 
             ACK_ID = int.from_bytes(ACK[:2], 'big')
@@ -138,7 +131,6 @@ def sender(filename: str, receiver_IP_address: str, receiver_port: int):
         except timeout:
             print("Request time out")
             next_seq_num = excepted_ack_id
-
     end_time = round(time.time(), 3)
     elapsed_time = end_time - transfer_start_time
     no_bytes = len(b''.join([packet[4:-2] for packet in packets]))
@@ -154,8 +146,5 @@ def sender(filename: str, receiver_IP_address: str, receiver_port: int):
         sender(new_filename, receiver_IP_address, receiver_port)
 if __name__ == '__main__':
     while True:
-        kwargs = {'filename': input("Enter the file name: "), 'receiver_IP_address': data["SERVER"], 'receiver_port': data["receiver_port"]}
+        kwargs = {'filename':"SmallFile.png", 'receiver_IP_address': data["SERVER"], 'receiver_port': data["receiver_port"]}
         sender(**kwargs)
-        send_another_file = input("Do you want to send another file? (yes/no)(y/n): ")
-        if send_another_file.lower() not in ["yes", "y"]:
-            break
