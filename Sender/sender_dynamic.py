@@ -55,6 +55,7 @@ if DROP_PROB == 0:
     loss_percentage = float(input("Enter the desired simulation packet loss percentage \n (You can set Default value in Params.json) (between 0% to 20%): "))
     DROP_PROB = loss_percentage  # Update DROP_PROB accordingly
 
+
 def sender(filename: str, receiver_IP_address: str, receiver_port: int):
     """
     This function sends a file to a receiver using a specified IP address and port.
