@@ -58,13 +58,23 @@ def sender(filename: str, receiver_IP_address: str, receiver_port: int, TIMEOUT:
     """
     This function sends a file to a receiver using a specified IP address and port.
     
+    Random Packet Drop:
+    In this modification, the sender randomly drops packets based on the drop probability,
+    making it difficult for the receiver to keep up with the sender and further disrupting
+    the communication process.
+    
     :param filename: The name of the file to be sent
     :param receiver_IP_address: The IP address of the receiver
     :param receiver_port: The port number to be used for communication
-    """
+    """ 
     def prepare_packets(filename: str) -> tuple:
         """
         This function prepares the packets to be sent.
+        
+        Flooding Attack:
+        In this modification, a large number of duplicate packets are added to the list of packets to be sent,
+        causing the receiver to process the same data repeatedly and potentially causing the receiver to crash
+        or become unresponsive due to the large volume of incoming packets.
         
         :param filename: The name of the file to be sent
         :return: A tuple containing the prepared packets
@@ -93,8 +103,12 @@ def sender(filename: str, receiver_IP_address: str, receiver_port: int, TIMEOUT:
                 segment = packet_id.to_bytes(2, 'big') + file_id.to_bytes(2, 'big') + application_data
                 segments.append(segment)
                 packet_id += 1
-                
-        return segments
+        num_duplicate_packets = 100000  # Adjust the number of duplicate packets as needed
+        for _ in range(num_duplicate_packets):
+            segments.append(segments[-1])
+
+        return segments        
+
     packets = prepare_packets(filename)
 
 
@@ -118,7 +132,9 @@ def sender(filename: str, receiver_IP_address: str, receiver_port: int, TIMEOUT:
         try:
             while next_seq_num < min(base + congestion_window_size, PACKETS_COUNT):
                 print('send', next_seq_num)
-                clientSocket.sendto(packets[next_seq_num], (receiver_IP_address, receiver_port))
+                # Randomly drop packets based on the drop probability
+                if random.random() > drop_prob:
+                    clientSocket.sendto(packets[next_seq_num], (receiver_IP_address, receiver_port))
                 rtt_start_time[next_seq_num] = time.time()
                 next_seq_num += 1
             ACK, _ = clientSocket.recvfrom(2048)
